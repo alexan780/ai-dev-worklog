@@ -1,0 +1,24 @@
+{
+  "name": "ai-dev-worklog",
+  "version": "0.1.0",
+  "description": "Local worklog CLI for AI-assisted development sessions.",
+  "type": "module",
+  "bin": {
+    "ai-dev-worklog": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test \"dist/**/*.test.js\""
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "typescript": "^5.4.5"
+  }
+}
