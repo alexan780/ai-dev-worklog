@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "0.1",
+  "generatedAt": "2026-06-06T00:00:00.000Z",
+  "cwd": "/workspace/example-repo",
+  "gitRoot": "/workspace/example-repo",
+  "summary": {
+    "statusEntryCount": 2,
+    "diffNameStatusEntryCount": 2,
+    "hasWorkingTreeChanges": true
+  },
+  "git": {
+    "statusPorcelain": {
+      "command": "git status --porcelain",
+      "stdout": " M README.md\n M src/index.ts",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "diffStat": {
+      "command": "git diff --stat",
+      "stdout": " README.md    | 12 ++++++++++--\n src/index.ts |  6 +++++-\n 2 files changed, 15 insertions(+), 3 deletions(-)",
+      "stderr": "",
+      "exitCode": 0
+    },
+    "diffNameStatus": {
+      "command": "git diff --name-status",
+      "stdout": "M\tREADME.md\nM\tsrc/index.ts",
+      "stderr": "",
+      "exitCode": 0
+    }
+  },
+  "observed": {
+    "statusEntries": [
+      {
+        "indexStatus": " ",
+        "workingTreeStatus": "M",
+        "path": "README.md",
+        "raw": " M README.md"
+      },
+      {
+        "indexStatus": " ",
+        "workingTreeStatus": "M",
+        "path": "src/index.ts",
+        "raw": " M src/index.ts"
+      }
+    ],
+    "diffNameStatusEntries": [
+      {
+        "status": "M",
+        "path": "README.md",
+        "raw": "M\tREADME.md"
+      },
+      {
+        "status": "M",
+        "path": "src/index.ts",
+        "raw": "M\tsrc/index.ts"
+      }
+    ]
+  }
+}

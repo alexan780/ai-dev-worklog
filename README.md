@@ -1,14 +1,26 @@
 # AI Dev Worklog
 
-A local worklog layer for AI-assisted development.
+A local CLI that turns git evidence into a readable AI development worklog.
 
-AI Dev Worklog helps record local evidence from a development session so the current state is easier to review and continue later.
+AI Dev Worklog scans the current git repository and writes a Markdown report plus a JSON report. It is useful when an AI-assisted coding session needs a local, reviewable record of what changed and how to continue.
 
-v0.1 is intentionally small: it scans the current git repository and writes a Markdown report plus a JSON report.
+v0.1 is intentionally small and local-first: it reads git evidence, writes files under `.ai-dev-worklog/`, and keeps the output on your machine.
+
+## What It Does Now
+
+`ai-dev-worklog scan` records:
+
+- changed files from `git status --porcelain`
+- tracked file changes from `git diff --name-status`
+- diff summary from `git diff --stat`
+- raw command output for the scanned git commands
+- a short continuation prompt for the next development session
 
 ## Quick Start
 
 ```bash
+git clone https://github.com/alexan780/ai-dev-worklog.git
+cd ai-dev-worklog
 npm install
 npm run build
 node dist/index.js scan
@@ -27,6 +39,18 @@ Running `node dist/index.js scan` writes:
 `latest.md` is the human-readable report.
 `latest.json` is the machine-readable scan result.
 
+Example output is available in [`examples/basic-worklog`](examples/basic-worklog).
+
+Example summary:
+
+```text
+## Summary
+
+- Git status entries: 2
+- Git diff name-status entries: 2
+- Working tree has changes: yes
+```
+
 ## What v0.1 Scans
 
 The local CLI reads these git commands:
@@ -40,6 +64,17 @@ git diff --name-status
 The scan uses local git evidence as the source of truth for observed code changes.
 
 v0.1 does not read chat windows, call AI APIs, upload code, or integrate with Codex App, Claude Code, Cursor, or MCP tools.
+
+## Why This Exists
+
+When context breaks, tools switch, or a task becomes long, it can be hard to answer:
+
+- What files actually changed?
+- What git evidence is available?
+- What still needs checking?
+- How should the next session continue?
+
+AI Dev Worklog turns AI-assisted coding sessions into local, reviewable development records.
 
 ## Local Development
 
@@ -70,17 +105,6 @@ node dist/index.js scan
 Generated build output goes to `dist/`.
 Generated worklog output goes to `.ai-dev-worklog/`.
 
-## Why This Exists
-
-When context breaks, tools switch, or a task becomes long, it can be hard to answer:
-
-- What files actually changed?
-- What git evidence is available?
-- What still needs checking?
-- How should the next session continue?
-
-AI Dev Worklog turns AI coding sessions into local, reviewable, reusable development records.
-
 ## What It Records
 
 v0.1 records observed local git evidence.
@@ -91,6 +115,7 @@ Current output includes:
 - tracked file changes from `git diff --name-status`
 - diff summary from `git diff --stat`
 - raw command output for the scanned git commands
+- a short continuation prompt
 
 Future versions may add declared intent, command history, validation evidence, and continuation prompts with a fuller schema.
 
@@ -136,4 +161,6 @@ Future versions may add declared intent, command history, validation evidence, a
 ## Status
 
 This project is in early development.
-The first milestone is a minimal local CLI that scans a git repository and generates a basic local worklog.
+v0.1 provides a minimal local CLI that scans a git repository and generates a basic local worklog.
+
+The next milestones focus on a fuller worklog schema, optional agent workflows, and local tool integrations.
