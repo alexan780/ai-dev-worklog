@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const outputDirectoryName = ".ai-dev-worklog";
 const toolName = "ai-dev-worklog";
-const toolVersion = "0.3.0";
+const toolVersion = "0.4.0";
 const scanCommand = "ai-dev-worklog scan";
 const statusPorcelainCommand = "git status --porcelain";
 const diffNameStatusCommand = "git diff --name-status";
