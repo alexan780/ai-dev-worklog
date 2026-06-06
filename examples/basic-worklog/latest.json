@@ -1,34 +1,51 @@
 {
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.2",
   "generatedAt": "2026-06-06T00:00:00.000Z",
-  "cwd": "/workspace/example-repo",
-  "gitRoot": "/workspace/example-repo",
+  "tool": {
+    "name": "ai-dev-worklog",
+    "version": "0.2.0",
+    "command": "ai-dev-worklog scan"
+  },
+  "repository": {
+    "cwd": "/workspace/example-repo",
+    "gitRoot": "/workspace/example-repo"
+  },
+  "declaredIntent": {
+    "status": "not_provided",
+    "source": "not_provided",
+    "summary": null
+  },
   "summary": {
     "statusEntryCount": 2,
     "diffNameStatusEntryCount": 2,
-    "hasWorkingTreeChanges": true
+    "changedFileCount": 2,
+    "hasWorkingTreeChanges": true,
+    "validationStatus": "not_recorded",
+    "riskSignalCount": 0
   },
-  "git": {
-    "statusPorcelain": {
-      "command": "git status --porcelain",
-      "stdout": " M README.md\n M src/index.ts",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "diffStat": {
-      "command": "git diff --stat",
-      "stdout": " README.md    | 12 ++++++++++--\n src/index.ts |  6 +++++-\n 2 files changed, 15 insertions(+), 3 deletions(-)",
-      "stderr": "",
-      "exitCode": 0
-    },
-    "diffNameStatus": {
-      "command": "git diff --name-status",
-      "stdout": "M\tREADME.md\nM\tsrc/index.ts",
-      "stderr": "",
-      "exitCode": 0
+  "evidence": {
+    "git": {
+      "statusPorcelain": {
+        "command": "git status --porcelain",
+        "stdout": " M README.md\n M src/index.ts",
+        "stderr": "",
+        "exitCode": 0
+      },
+      "diffStat": {
+        "command": "git diff --stat",
+        "stdout": " README.md    | 12 ++++++++++--\n src/index.ts |  6 +++++-\n 2 files changed, 15 insertions(+), 3 deletions(-)",
+        "stderr": "",
+        "exitCode": 0
+      },
+      "diffNameStatus": {
+        "command": "git diff --name-status",
+        "stdout": "M\tREADME.md\nM\tsrc/index.ts",
+        "stderr": "",
+        "exitCode": 0
+      }
     }
   },
-  "observed": {
+  "observedChanges": {
     "statusEntries": [
       {
         "indexStatus": " ",
@@ -54,6 +71,37 @@
         "path": "src/index.ts",
         "raw": "M\tsrc/index.ts"
       }
+    ],
+    "files": [
+      {
+        "path": "README.md",
+        "previousPath": null,
+        "status": "modified",
+        "sources": [
+          "git status --porcelain",
+          "git diff --name-status"
+        ]
+      },
+      {
+        "path": "src/index.ts",
+        "previousPath": null,
+        "status": "modified",
+        "sources": [
+          "git status --porcelain",
+          "git diff --name-status"
+        ]
+      }
     ]
+  },
+  "validation": {
+    "status": "not_recorded",
+    "commands": []
+  },
+  "riskSignals": {
+    "items": []
+  },
+  "nextSteps": {
+    "items": [],
+    "continuationPrompt": "Use this local git evidence to continue the development session. Review the changed files, verify the listed commands, and decide the next implementation or validation step from the current repository state."
   }
 }

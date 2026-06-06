@@ -8,7 +8,17 @@ Working directory: /workspace/example-repo
 
 - Git status entries: 2
 - Git diff name-status entries: 2
+- Changed files: 2
 - Working tree has changes: yes
+- Validation: not_recorded
+- Risk signals: 0
+
+## Changed Files
+
+| Status | Path | Previous path | Sources |
+| --- | --- | --- | --- |
+| modified | README.md |  | git status --porcelain, git diff --name-status |
+| modified | src/index.ts |  | git status --porcelain, git diff --name-status |
 
 ## Changed Files From Status
 

@@ -9,6 +9,12 @@ import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 const outputDirectoryName = ".ai-dev-worklog";
+const toolName = "ai-dev-worklog";
+const toolVersion = "0.2.0";
+const scanCommand = "ai-dev-worklog scan";
+const statusPorcelainCommand = "git status --porcelain";
+const diffNameStatusCommand = "git diff --name-status";
+const continuationPrompt = "Use this local git evidence to continue the development session. Review the changed files, verify the listed commands, and decide the next implementation or validation step from the current repository state.";
 
 export interface GitCommandResult {
   command: string;
@@ -32,25 +38,89 @@ export interface NameStatusEntry {
   raw: string;
 }
 
-export interface WorklogScan {
-  schemaVersion: "0.1";
-  generatedAt: string;
+export type ObservedFileStatus =
+  | "modified"
+  | "added"
+  | "deleted"
+  | "renamed"
+  | "copied"
+  | "untracked"
+  | "unknown";
+
+export interface ToolInfo {
+  name: string;
+  version: string;
+  command: string;
+}
+
+export interface RepositoryInfo {
   cwd: string;
   gitRoot: string;
+}
+
+export interface DeclaredIntent {
+  status: "not_provided";
+  source: "not_provided";
+  summary: string | null;
+}
+
+export interface ObservedFileChange {
+  path: string;
+  previousPath: string | null;
+  status: ObservedFileStatus;
+  sources: string[];
+}
+
+export interface ValidationRecord {
+  status: "not_recorded";
+  commands: [];
+}
+
+export interface RiskSignal {
+  kind: "untracked_files" | "deleted_files" | "renamed_files";
+  severity: "info" | "warning";
+  message: string;
+  paths: string[];
+}
+
+export interface RiskSignals {
+  items: RiskSignal[];
+}
+
+export interface NextSteps {
+  items: [];
+  continuationPrompt: string;
+}
+
+export interface WorklogScan {
+  schemaVersion: "0.2";
+  generatedAt: string;
+  tool: ToolInfo;
+  repository: RepositoryInfo;
+  declaredIntent: DeclaredIntent;
   summary: {
     statusEntryCount: number;
     diffNameStatusEntryCount: number;
+    changedFileCount: number;
     hasWorkingTreeChanges: boolean;
+    validationStatus: ValidationRecord["status"];
+    riskSignalCount: number;
   };
-  git: {
-    statusPorcelain: GitCommandResult;
-    diffStat: GitCommandResult;
-    diffNameStatus: GitCommandResult;
+  evidence: {
+    git: {
+      statusPorcelain: GitCommandResult;
+      diffStat: GitCommandResult;
+      diffNameStatus: GitCommandResult;
+    };
   };
-  observed: {
+  observedChanges: {
     statusEntries: StatusEntry[];
     diffNameStatusEntries: NameStatusEntry[];
+    files: ObservedFileChange[];
   };
+  validation: ValidationRecord;
+  riskSignals: RiskSignals;
+  nextSteps: NextSteps;
 }
 
 interface ExecFileError extends Error {
@@ -107,6 +177,66 @@ export function parseNameStatus(output: string): NameStatusEntry[] {
   });
 }
 
+export function buildObservedFiles(statusEntries: StatusEntry[], diffNameStatusEntries: NameStatusEntry[]): ObservedFileChange[] {
+  const filesByPath = new Map<string, ObservedFileChange>();
+
+  for (const entry of statusEntries) {
+    upsertObservedFile(filesByPath, {
+      path: entry.path,
+      previousPath: entry.previousPath ?? null,
+      status: mapStatusEntryToFileStatus(entry),
+      source: statusPorcelainCommand,
+    });
+  }
+
+  for (const entry of diffNameStatusEntries) {
+    upsertObservedFile(filesByPath, {
+      path: entry.path,
+      previousPath: entry.previousPath ?? null,
+      status: mapNameStatusEntryToFileStatus(entry),
+      source: diffNameStatusCommand,
+    });
+  }
+
+  return Array.from(filesByPath.values());
+}
+
+export function buildRiskSignals(files: ObservedFileChange[]): RiskSignals {
+  const items: RiskSignal[] = [];
+  const untrackedPaths = pathsWithStatus(files, "untracked");
+  const deletedPaths = pathsWithStatus(files, "deleted");
+  const renamedPaths = pathsWithStatus(files, "renamed");
+
+  if (untrackedPaths.length > 0) {
+    items.push({
+      kind: "untracked_files",
+      severity: "info",
+      message: "Untracked files are present.",
+      paths: untrackedPaths,
+    });
+  }
+
+  if (deletedPaths.length > 0) {
+    items.push({
+      kind: "deleted_files",
+      severity: "warning",
+      message: "Deleted files are present.",
+      paths: deletedPaths,
+    });
+  }
+
+  if (renamedPaths.length > 0) {
+    items.push({
+      kind: "renamed_files",
+      severity: "info",
+      message: "Renamed files are present.",
+      paths: renamedPaths,
+    });
+  }
+
+  return { items };
+}
+
 export async function scanRepository(cwd: string = process.cwd()): Promise<WorklogScan> {
   const gitRoot = await resolveGitRoot(cwd);
   const [statusPorcelain, diffStat, diffNameStatus] = await Promise.all([
@@ -121,31 +251,61 @@ export async function scanRepository(cwd: string = process.cwd()): Promise<Workl
 
   const statusEntries = parseStatusPorcelain(statusPorcelain.stdout);
   const diffNameStatusEntries = parseNameStatus(diffNameStatus.stdout);
+  const files = buildObservedFiles(statusEntries, diffNameStatusEntries);
+  const validation: ValidationRecord = {
+    status: "not_recorded",
+    commands: [],
+  };
+  const riskSignals = buildRiskSignals(files);
 
   return {
-    schemaVersion: "0.1",
+    schemaVersion: "0.2",
     generatedAt: new Date().toISOString(),
-    cwd: path.resolve(cwd),
-    gitRoot,
+    tool: {
+      name: toolName,
+      version: toolVersion,
+      command: scanCommand,
+    },
+    repository: {
+      cwd: path.resolve(cwd),
+      gitRoot,
+    },
+    declaredIntent: {
+      status: "not_provided",
+      source: "not_provided",
+      summary: null,
+    },
     summary: {
       statusEntryCount: statusEntries.length,
       diffNameStatusEntryCount: diffNameStatusEntries.length,
+      changedFileCount: files.length,
       hasWorkingTreeChanges: statusEntries.length > 0,
+      validationStatus: validation.status,
+      riskSignalCount: riskSignals.items.length,
     },
-    git: {
-      statusPorcelain,
-      diffStat,
-      diffNameStatus,
+    evidence: {
+      git: {
+        statusPorcelain,
+        diffStat,
+        diffNameStatus,
+      },
     },
-    observed: {
+    observedChanges: {
       statusEntries,
       diffNameStatusEntries,
+      files,
+    },
+    validation,
+    riskSignals,
+    nextSteps: {
+      items: [],
+      continuationPrompt,
     },
   };
 }
 
 export async function writeScanOutputs(scan: WorklogScan): Promise<{ markdownPath: string; jsonPath: string }> {
-  const outputDirectory = path.join(scan.gitRoot, outputDirectoryName);
+  const outputDirectory = path.join(scan.repository.gitRoot, outputDirectoryName);
   const markdownPath = path.join(outputDirectory, "latest.md");
   const jsonPath = path.join(outputDirectory, "latest.json");
 
@@ -159,14 +319,20 @@ export async function writeScanOutputs(scan: WorklogScan): Promise<{ markdownPat
 }
 
 export function renderMarkdown(scan: WorklogScan): string {
-  const statusRows = scan.observed.statusEntries
+  const changedFileRows = scan.observedChanges.files
+    .map((entry) => {
+      return `| ${escapeMarkdownTableCell(entry.status)} | ${escapeMarkdownTableCell(entry.path)} | ${escapeMarkdownTableCell(entry.previousPath ?? "")} | ${escapeMarkdownTableCell(entry.sources.join(", "))} |`;
+    })
+    .join("\n");
+
+  const statusRows = scan.observedChanges.statusEntries
     .map((entry) => {
       const status = `${entry.indexStatus}${entry.workingTreeStatus}`;
       return `| ${escapeMarkdownTableCell(status)} | ${escapeMarkdownTableCell(entry.path)} | ${escapeMarkdownTableCell(entry.previousPath ?? "")} |`;
     })
     .join("\n");
 
-  const diffRows = scan.observed.diffNameStatusEntries
+  const diffRows = scan.observedChanges.diffNameStatusEntries
     .map((entry) => {
       return `| ${escapeMarkdownTableCell(entry.status)} | ${escapeMarkdownTableCell(entry.path)} | ${escapeMarkdownTableCell(entry.previousPath ?? "")} |`;
     })
@@ -176,14 +342,23 @@ export function renderMarkdown(scan: WorklogScan): string {
     "# AI Dev Worklog Scan",
     "",
     `Generated: ${scan.generatedAt}`,
-    `Repository: ${scan.gitRoot}`,
-    `Working directory: ${scan.cwd}`,
+    `Repository: ${scan.repository.gitRoot}`,
+    `Working directory: ${scan.repository.cwd}`,
     "",
     "## Summary",
     "",
     `- Git status entries: ${scan.summary.statusEntryCount}`,
     `- Git diff name-status entries: ${scan.summary.diffNameStatusEntryCount}`,
+    `- Changed files: ${scan.summary.changedFileCount}`,
     `- Working tree has changes: ${scan.summary.hasWorkingTreeChanges ? "yes" : "no"}`,
+    `- Validation: ${scan.summary.validationStatus}`,
+    `- Risk signals: ${scan.summary.riskSignalCount}`,
+    "",
+    "## Changed Files",
+    "",
+    "| Status | Path | Previous path | Sources |",
+    "| --- | --- | --- | --- |",
+    changedFileRows || "|  |  |  |  |",
     "",
     "## Changed Files From Status",
     "",
@@ -199,19 +374,19 @@ export function renderMarkdown(scan: WorklogScan): string {
     "",
     "## git status --porcelain",
     "",
-    codeBlock(scan.git.statusPorcelain.stdout),
+    codeBlock(scan.evidence.git.statusPorcelain.stdout),
     "",
     "## git diff --stat",
     "",
-    codeBlock(scan.git.diffStat.stdout),
+    codeBlock(scan.evidence.git.diffStat.stdout),
     "",
     "## git diff --name-status",
     "",
-    codeBlock(scan.git.diffNameStatus.stdout),
+    codeBlock(scan.evidence.git.diffNameStatus.stdout),
     "",
     "## Continue Prompt",
     "",
-    "Use this local git evidence to continue the development session. Review the changed files, verify the listed commands, and decide the next implementation or validation step from the current repository state.",
+    scan.nextSteps.continuationPrompt,
     "",
   ].join("\n");
 }
@@ -274,6 +449,100 @@ function assertGitCommandSucceeded(result: GitCommandResult): void {
   if (result.exitCode !== 0) {
     throw new Error(`${result.command} failed with exit code ${result.exitCode}: ${result.stderr}`);
   }
+}
+
+function upsertObservedFile(
+  filesByPath: Map<string, ObservedFileChange>,
+  input: {
+    path: string;
+    previousPath: string | null;
+    status: ObservedFileStatus;
+    source: string;
+  },
+): void {
+  const existing = filesByPath.get(input.path);
+
+  if (existing === undefined) {
+    filesByPath.set(input.path, {
+      path: input.path,
+      previousPath: input.previousPath,
+      status: input.status,
+      sources: [input.source],
+    });
+    return;
+  }
+
+  if (existing.previousPath === null && input.previousPath !== null) {
+    existing.previousPath = input.previousPath;
+  }
+
+  if (existing.status === "unknown" && input.status !== "unknown") {
+    existing.status = input.status;
+  }
+
+  if (!existing.sources.includes(input.source)) {
+    existing.sources.push(input.source);
+  }
+}
+
+function mapStatusEntryToFileStatus(entry: StatusEntry): ObservedFileStatus {
+  const statuses = [entry.indexStatus, entry.workingTreeStatus];
+
+  if (entry.indexStatus === "?" && entry.workingTreeStatus === "?") {
+    return "untracked";
+  }
+
+  if (statuses.includes("R")) {
+    return "renamed";
+  }
+
+  if (statuses.includes("C")) {
+    return "copied";
+  }
+
+  if (statuses.includes("D")) {
+    return "deleted";
+  }
+
+  if (statuses.includes("A")) {
+    return "added";
+  }
+
+  if (statuses.includes("M")) {
+    return "modified";
+  }
+
+  return "unknown";
+}
+
+function mapNameStatusEntryToFileStatus(entry: NameStatusEntry): ObservedFileStatus {
+  const statusKind = entry.status[0];
+
+  if (statusKind === "R") {
+    return "renamed";
+  }
+
+  if (statusKind === "C") {
+    return "copied";
+  }
+
+  if (statusKind === "D") {
+    return "deleted";
+  }
+
+  if (statusKind === "A") {
+    return "added";
+  }
+
+  if (statusKind === "M") {
+    return "modified";
+  }
+
+  return "unknown";
+}
+
+function pathsWithStatus(files: ObservedFileChange[], status: ObservedFileStatus): string[] {
+  return files.filter((file) => file.status === status).map((file) => file.path);
 }
 
 function splitLines(output: string): string[] {

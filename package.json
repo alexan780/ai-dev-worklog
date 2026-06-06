@@ -1,6 +1,6 @@
 {
   "name": "ai-dev-worklog",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local worklog CLI for AI-assisted development sessions.",
   "type": "module",
   "bin": {
@@ -12,7 +12,9 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "files": [
-    "dist",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/index.js.map",
     "README.md",
     "LICENSE"
   ],

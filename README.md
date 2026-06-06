@@ -4,7 +4,7 @@ A local CLI that turns git evidence into a readable AI development worklog.
 
 AI Dev Worklog scans the current git repository and writes a Markdown report plus a JSON report. It is useful when an AI-assisted coding session needs a local, reviewable record of what changed and how to continue.
 
-v0.1 is intentionally small and local-first: it reads git evidence, writes files under `.ai-dev-worklog/`, and keeps the output on your machine.
+The CLI is intentionally small and local-first: it reads git evidence, writes files under `.ai-dev-worklog/`, and keeps the output on your machine.
 
 ## What It Does Now
 
@@ -14,6 +14,7 @@ v0.1 is intentionally small and local-first: it reads git evidence, writes files
 - tracked file changes from `git diff --name-status`
 - diff summary from `git diff --stat`
 - raw command output for the scanned git commands
+- structured JSON fields for evidence, observed changes, validation status, risk signals, and next steps
 - a short continuation prompt for the next development session
 
 ## Quick Start
@@ -37,7 +38,7 @@ Running `node dist/index.js scan` writes:
 ```
 
 `latest.md` is the human-readable report.
-`latest.json` is the machine-readable scan result.
+`latest.json` is the machine-readable scan result. It uses a structured worklog schema that separates git evidence, observed changes, validation status, risk signals, and next steps.
 
 Example output is available in [`examples/basic-worklog`](examples/basic-worklog).
 
@@ -48,10 +49,13 @@ Example summary:
 
 - Git status entries: 2
 - Git diff name-status entries: 2
+- Changed files: 2
 - Working tree has changes: yes
+- Validation: not_recorded
+- Risk signals: 0
 ```
 
-## What v0.1 Scans
+## What The CLI Scans
 
 The local CLI reads these git commands:
 
@@ -63,7 +67,7 @@ git diff --name-status
 
 The scan uses local git evidence as the source of truth for observed code changes.
 
-v0.1 does not read chat windows, call AI APIs, upload code, or integrate with Codex App, Claude Code, Cursor, or MCP tools.
+The CLI does not read chat windows, call AI APIs, upload code, or integrate with Codex App, Claude Code, Cursor, or MCP tools.
 
 ## Why This Exists
 
@@ -107,7 +111,7 @@ Generated worklog output goes to `.ai-dev-worklog/`.
 
 ## What It Records
 
-v0.1 records observed local git evidence.
+The CLI records observed local git evidence.
 
 Current output includes:
 
@@ -115,9 +119,10 @@ Current output includes:
 - tracked file changes from `git diff --name-status`
 - diff summary from `git diff --stat`
 - raw command output for the scanned git commands
+- a JSON worklog schema with declared intent, evidence, observed changes, validation status, risk signals, and next steps
 - a short continuation prompt
 
-Future versions may add declared intent, command history, validation evidence, and continuation prompts with a fuller schema.
+Future versions may add user-provided declared intent, command history, validation evidence, and richer continuation prompts.
 
 ## What It Is
 
@@ -140,8 +145,8 @@ Future versions may add declared intent, command history, validation evidence, a
 
 - Define a stable JSON structure for AI coding worklogs
 - Separate declared intent from observed evidence
-- Add basic risk signals
-- Add retention and cleanup rules
+- Add unified observed file changes
+- Add validation status and basic risk signals
 
 ### v0.3 - Agent Workflows
 
@@ -161,6 +166,6 @@ Future versions may add declared intent, command history, validation evidence, a
 ## Status
 
 This project is in early development.
-v0.1 provides a minimal local CLI that scans a git repository and generates a basic local worklog.
+The CLI scans a git repository and generates a local Markdown worklog plus a structured JSON scan result.
 
-The next milestones focus on a fuller worklog schema, optional agent workflows, and local tool integrations.
+The next milestones focus on richer continuation prompts, optional agent workflows, and local tool integrations.
