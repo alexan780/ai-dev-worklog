@@ -2,7 +2,7 @@
 
 All notable changes to AI Dev Worklog are recorded here.
 
-## 0.4.0 - Unreleased
+## 0.4.0 - 2026-06-06
 
 - Add GitHub Actions CI for install, build, and test validation.
 - Add a formal JSON Schema for `latest.json` at `schema/worklog.schema.json`.

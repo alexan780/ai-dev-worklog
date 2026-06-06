@@ -161,8 +161,6 @@ Future versions may add user-provided declared intent, command history, and vali
 - Generate a continuation prompt for the next development session
 - Keep git evidence as the source of truth for observed code changes
 
-### Current Milestone
-
 #### v0.4 - Open-source Readiness
 
 - Add GitHub Actions CI
