@@ -2,7 +2,7 @@
 
 A local CLI that turns git evidence into a readable AI development worklog.
 
-AI Dev Worklog scans the current git repository and writes a Markdown report plus a JSON report. It is useful when an AI-assisted coding session needs a local, reviewable record of what changed and how to continue.
+AI Dev Worklog scans the current git repository and writes a Markdown report, a JSON report, and a continuation prompt. It is useful when an AI-assisted coding session needs a local, reviewable record of what changed and how to continue.
 
 The CLI is intentionally small and local-first: it reads git evidence, writes files under `.ai-dev-worklog/`, and keeps the output on your machine.
 
@@ -15,7 +15,7 @@ The CLI is intentionally small and local-first: it reads git evidence, writes fi
 - diff summary from `git diff --stat`
 - raw command output for the scanned git commands
 - structured JSON fields for evidence, observed changes, validation status, risk signals, and next steps
-- a short continuation prompt for the next development session
+- a continuation prompt file for the next development session
 
 ## Quick Start
 
@@ -35,10 +35,12 @@ Running `node dist/index.js scan` writes:
 .ai-dev-worklog/
   latest.md
   latest.json
+  continue-prompt.md
 ```
 
 `latest.md` is the human-readable report.
 `latest.json` is the machine-readable scan result. It uses a structured worklog schema that separates git evidence, observed changes, validation status, risk signals, and next steps.
+`continue-prompt.md` is a prompt-oriented summary for continuing the development session.
 
 Example output is available in [`examples/basic-worklog`](examples/basic-worklog).
 
@@ -120,9 +122,9 @@ Current output includes:
 - diff summary from `git diff --stat`
 - raw command output for the scanned git commands
 - a JSON worklog schema with declared intent, evidence, observed changes, validation status, risk signals, and next steps
-- a short continuation prompt
+- a continuation prompt file with changed files, command results, risk signals, remaining checks, and suggested next steps
 
-Future versions may add user-provided declared intent, command history, validation evidence, and richer continuation prompts.
+Future versions may add user-provided declared intent, command history, and validation evidence.
 
 ## What It Is
 
@@ -150,6 +152,7 @@ Future versions may add user-provided declared intent, command history, validati
 
 ### v0.3 - Agent Workflows
 
+- Generate a continuation prompt for the next development session
 - Add optional workflows for AI coding tools
 - Keep git evidence as the source of truth for observed code changes
 
@@ -166,6 +169,6 @@ Future versions may add user-provided declared intent, command history, validati
 ## Status
 
 This project is in early development.
-The CLI scans a git repository and generates a local Markdown worklog plus a structured JSON scan result.
+The CLI scans a git repository and generates a local Markdown worklog, a structured JSON scan result, and a continuation prompt.
 
-The next milestones focus on richer continuation prompts, optional agent workflows, and local tool integrations.
+The next milestones focus on optional agent workflows and local tool integrations.

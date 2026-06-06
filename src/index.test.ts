@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import {
@@ -6,9 +9,98 @@ import {
   buildRiskSignals,
   parseNameStatus,
   parseStatusPorcelain,
+  renderContinuePrompt,
   renderMarkdown,
+  writeScanOutputs,
   type WorklogScan,
 } from "./index.js";
+
+function createSampleScan(gitRoot: string = "C:\\repo"): WorklogScan {
+  return {
+    schemaVersion: "0.2",
+    generatedAt: "2026-06-06T00:00:00.000Z",
+    tool: {
+      name: "ai-dev-worklog",
+      version: "0.3.0",
+      command: "ai-dev-worklog scan",
+    },
+    repository: {
+      cwd: gitRoot,
+      gitRoot,
+    },
+    declaredIntent: {
+      status: "not_provided",
+      source: "not_provided",
+      summary: null,
+    },
+    summary: {
+      statusEntryCount: 1,
+      diffNameStatusEntryCount: 1,
+      changedFileCount: 1,
+      hasWorkingTreeChanges: true,
+      validationStatus: "not_recorded",
+      riskSignalCount: 0,
+    },
+    evidence: {
+      git: {
+        statusPorcelain: {
+          command: "git status --porcelain",
+          stdout: " M README.md",
+          stderr: "",
+          exitCode: 0,
+        },
+        diffStat: {
+          command: "git diff --stat",
+          stdout: " README.md | 1 +",
+          stderr: "",
+          exitCode: 0,
+        },
+        diffNameStatus: {
+          command: "git diff --name-status",
+          stdout: "M\tREADME.md",
+          stderr: "",
+          exitCode: 0,
+        },
+      },
+    },
+    observedChanges: {
+      statusEntries: [
+        {
+          indexStatus: " ",
+          workingTreeStatus: "M",
+          path: "README.md",
+          raw: " M README.md",
+        },
+      ],
+      diffNameStatusEntries: [
+        {
+          status: "M",
+          path: "README.md",
+          raw: "M\tREADME.md",
+        },
+      ],
+      files: [
+        {
+          path: "README.md",
+          previousPath: null,
+          status: "modified",
+          sources: ["git status --porcelain", "git diff --name-status"],
+        },
+      ],
+    },
+    validation: {
+      status: "not_recorded",
+      commands: [],
+    },
+    riskSignals: {
+      items: [],
+    },
+    nextSteps: {
+      items: [],
+      continuationPrompt: "Use this local git evidence to continue the development session. Review the changed files, verify the listed commands, and decide the next implementation or validation step from the current repository state.",
+    },
+  };
+}
 
 test("parseStatusPorcelain parses simple and renamed entries", () => {
   const entries = parseStatusPorcelain(" M README.md\nR  old.ts -> new.ts\n?? package.json");
@@ -115,90 +207,7 @@ test("buildRiskSignals reports untracked, deleted, and renamed files", () => {
 });
 
 test("renderMarkdown includes command output and observed changes", () => {
-  const scan: WorklogScan = {
-    schemaVersion: "0.2",
-    generatedAt: "2026-06-06T00:00:00.000Z",
-    tool: {
-      name: "ai-dev-worklog",
-      version: "0.2.0",
-      command: "ai-dev-worklog scan",
-    },
-    repository: {
-      cwd: "C:\\repo",
-      gitRoot: "C:\\repo",
-    },
-    declaredIntent: {
-      status: "not_provided",
-      source: "not_provided",
-      summary: null,
-    },
-    summary: {
-      statusEntryCount: 1,
-      diffNameStatusEntryCount: 1,
-      changedFileCount: 1,
-      hasWorkingTreeChanges: true,
-      validationStatus: "not_recorded",
-      riskSignalCount: 0,
-    },
-    evidence: {
-      git: {
-        statusPorcelain: {
-          command: "git status --porcelain",
-          stdout: " M README.md",
-          stderr: "",
-          exitCode: 0,
-        },
-        diffStat: {
-          command: "git diff --stat",
-          stdout: " README.md | 1 +",
-          stderr: "",
-          exitCode: 0,
-        },
-        diffNameStatus: {
-          command: "git diff --name-status",
-          stdout: "M\tREADME.md",
-          stderr: "",
-          exitCode: 0,
-        },
-      },
-    },
-    observedChanges: {
-      statusEntries: [
-        {
-          indexStatus: " ",
-          workingTreeStatus: "M",
-          path: "README.md",
-          raw: " M README.md",
-        },
-      ],
-      diffNameStatusEntries: [
-        {
-          status: "M",
-          path: "README.md",
-          raw: "M\tREADME.md",
-        },
-      ],
-      files: [
-        {
-          path: "README.md",
-          previousPath: null,
-          status: "modified",
-          sources: ["git status --porcelain", "git diff --name-status"],
-        },
-      ],
-    },
-    validation: {
-      status: "not_recorded",
-      commands: [],
-    },
-    riskSignals: {
-      items: [],
-    },
-    nextSteps: {
-      items: [],
-      continuationPrompt: "Use this local git evidence to continue the development session. Review the changed files, verify the listed commands, and decide the next implementation or validation step from the current repository state.",
-    },
-  };
+  const scan = createSampleScan();
 
   const json = JSON.parse(JSON.stringify(scan)) as Record<string, unknown>;
   assert.equal(json.schemaVersion, "0.2");
@@ -228,4 +237,61 @@ test("renderMarkdown includes command output and observed changes", () => {
   assert.match(markdown, /\|  M \| README\.md \|/);
   assert.match(markdown, /git diff --name-status/);
   assert.match(markdown, /M\tREADME\.md/);
+});
+
+test("renderContinuePrompt includes continuation sections and empty states", () => {
+  const prompt = renderContinuePrompt(createSampleScan());
+
+  assert.match(prompt, /# Continue This Development Session/);
+  assert.match(prompt, /## Original Task Goal/);
+  assert.match(prompt, /Not provided by this local scan\./);
+  assert.match(prompt, /## Repository/);
+  assert.match(prompt, /- Working directory: C:\\repo/);
+  assert.match(prompt, /## Changed Files/);
+  assert.match(prompt, /\| modified \| README\.md \|  \| git status --porcelain, git diff --name-status \|/);
+  assert.match(prompt, /## Command Results/);
+  assert.match(prompt, /- `git status --porcelain`: exit code 0/);
+  assert.match(prompt, /- `git diff --stat`: exit code 0/);
+  assert.match(prompt, /- `git diff --name-status`: exit code 0/);
+  assert.match(prompt, /## Risk Signals/);
+  assert.match(prompt, /No risk signals recorded\./);
+  assert.match(prompt, /## Remaining Checks/);
+  assert.match(prompt, /- Validation has not been recorded by this local scan\./);
+  assert.match(prompt, /## Suggested Next Steps/);
+  assert.match(prompt, /Use this local git evidence to continue the development session/);
+});
+
+test("renderContinuePrompt handles empty changed files", () => {
+  const scan = createSampleScan();
+  scan.observedChanges.files = [];
+  scan.summary.changedFileCount = 0;
+
+  const prompt = renderContinuePrompt(scan);
+
+  assert.match(prompt, /No changed files observed\./);
+});
+
+test("writeScanOutputs writes markdown, json, and continuation prompt outputs", async () => {
+  const tempDirectory = await mkdtemp(path.join(os.tmpdir(), "ai-dev-worklog-test-"));
+
+  try {
+    const scan = createSampleScan(tempDirectory);
+    const outputs = await writeScanOutputs(scan);
+
+    assert.equal(outputs.markdownPath, path.join(tempDirectory, ".ai-dev-worklog", "latest.md"));
+    assert.equal(outputs.jsonPath, path.join(tempDirectory, ".ai-dev-worklog", "latest.json"));
+    assert.equal(outputs.continuePromptPath, path.join(tempDirectory, ".ai-dev-worklog", "continue-prompt.md"));
+
+    const [markdown, json, prompt] = await Promise.all([
+      readFile(outputs.markdownPath, "utf8"),
+      readFile(outputs.jsonPath, "utf8"),
+      readFile(outputs.continuePromptPath, "utf8"),
+    ]);
+
+    assert.match(markdown, /# AI Dev Worklog Scan/);
+    assert.equal(JSON.parse(json).tool.version, "0.3.0");
+    assert.match(prompt, /# Continue This Development Session/);
+  } finally {
+    await rm(tempDirectory, { recursive: true, force: true });
+  }
 });

@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const outputDirectoryName = ".ai-dev-worklog";
 const toolName = "ai-dev-worklog";
-const toolVersion = "0.2.0";
+const toolVersion = "0.3.0";
 const scanCommand = "ai-dev-worklog scan";
 const statusPorcelainCommand = "git status --porcelain";
 const diffNameStatusCommand = "git diff --name-status";
@@ -304,26 +304,24 @@ export async function scanRepository(cwd: string = process.cwd()): Promise<Workl
   };
 }
 
-export async function writeScanOutputs(scan: WorklogScan): Promise<{ markdownPath: string; jsonPath: string }> {
+export async function writeScanOutputs(scan: WorklogScan): Promise<{ markdownPath: string; jsonPath: string; continuePromptPath: string }> {
   const outputDirectory = path.join(scan.repository.gitRoot, outputDirectoryName);
   const markdownPath = path.join(outputDirectory, "latest.md");
   const jsonPath = path.join(outputDirectory, "latest.json");
+  const continuePromptPath = path.join(outputDirectory, "continue-prompt.md");
 
   await mkdir(outputDirectory, { recursive: true });
   await Promise.all([
     writeFile(markdownPath, renderMarkdown(scan), "utf8"),
     writeFile(jsonPath, `${JSON.stringify(scan, null, 2)}\n`, "utf8"),
+    writeFile(continuePromptPath, renderContinuePrompt(scan), "utf8"),
   ]);
 
-  return { markdownPath, jsonPath };
+  return { markdownPath, jsonPath, continuePromptPath };
 }
 
 export function renderMarkdown(scan: WorklogScan): string {
-  const changedFileRows = scan.observedChanges.files
-    .map((entry) => {
-      return `| ${escapeMarkdownTableCell(entry.status)} | ${escapeMarkdownTableCell(entry.path)} | ${escapeMarkdownTableCell(entry.previousPath ?? "")} | ${escapeMarkdownTableCell(entry.sources.join(", "))} |`;
-    })
-    .join("\n");
+  const changedFileRows = renderObservedFileRows(scan.observedChanges.files);
 
   const statusRows = scan.observedChanges.statusEntries
     .map((entry) => {
@@ -391,6 +389,42 @@ export function renderMarkdown(scan: WorklogScan): string {
   ].join("\n");
 }
 
+export function renderContinuePrompt(scan: WorklogScan): string {
+  return [
+    "# Continue This Development Session",
+    "",
+    "## Original Task Goal",
+    "",
+    renderDeclaredIntent(scan.declaredIntent),
+    "",
+    "## Repository",
+    "",
+    `- Working directory: ${scan.repository.cwd}`,
+    `- Git root: ${scan.repository.gitRoot}`,
+    "",
+    "## Changed Files",
+    "",
+    renderChangedFilesForPrompt(scan.observedChanges.files),
+    "",
+    "## Command Results",
+    "",
+    renderCommandResults(scan),
+    "",
+    "## Risk Signals",
+    "",
+    renderRiskSignals(scan.riskSignals),
+    "",
+    "## Remaining Checks",
+    "",
+    renderRemainingChecks(scan.validation),
+    "",
+    "## Suggested Next Steps",
+    "",
+    scan.nextSteps.continuationPrompt,
+    "",
+  ].join("\n");
+}
+
 export async function runCli(argv: string[] = process.argv.slice(2), cwd: string = process.cwd()): Promise<number> {
   const [command] = argv;
 
@@ -399,6 +433,7 @@ export async function runCli(argv: string[] = process.argv.slice(2), cwd: string
     const outputs = await writeScanOutputs(scan);
     console.log(`Wrote ${outputs.markdownPath}`);
     console.log(`Wrote ${outputs.jsonPath}`);
+    console.log(`Wrote ${outputs.continuePromptPath}`);
     return 0;
   }
 
@@ -543,6 +578,72 @@ function mapNameStatusEntryToFileStatus(entry: NameStatusEntry): ObservedFileSta
 
 function pathsWithStatus(files: ObservedFileChange[], status: ObservedFileStatus): string[] {
   return files.filter((file) => file.status === status).map((file) => file.path);
+}
+
+function renderObservedFileRows(files: ObservedFileChange[]): string {
+  return files
+    .map((entry) => {
+      return `| ${escapeMarkdownTableCell(entry.status)} | ${escapeMarkdownTableCell(entry.path)} | ${escapeMarkdownTableCell(entry.previousPath ?? "")} | ${escapeMarkdownTableCell(entry.sources.join(", "))} |`;
+    })
+    .join("\n");
+}
+
+function renderChangedFilesForPrompt(files: ObservedFileChange[]): string {
+  if (files.length === 0) {
+    return "No changed files observed.";
+  }
+
+  return [
+    "| Status | Path | Previous path | Sources |",
+    "| --- | --- | --- | --- |",
+    renderObservedFileRows(files),
+  ].join("\n");
+}
+
+function renderDeclaredIntent(declaredIntent: DeclaredIntent): string {
+  if (declaredIntent.status === "not_provided") {
+    return "Not provided by this local scan.";
+  }
+
+  return declaredIntent.summary ?? "Not provided by this local scan.";
+}
+
+function renderCommandResults(scan: WorklogScan): string {
+  return [
+    scan.evidence.git.statusPorcelain,
+    scan.evidence.git.diffStat,
+    scan.evidence.git.diffNameStatus,
+  ].map((result) => `- \`${result.command}\`: exit code ${result.exitCode}`).join("\n");
+}
+
+function renderRiskSignals(riskSignals: RiskSignals): string {
+  if (riskSignals.items.length === 0) {
+    return "No risk signals recorded.";
+  }
+
+  return riskSignals.items
+    .map((item) => {
+      const paths = item.paths.length > 0 ? ` Paths: ${item.paths.join(", ")}.` : "";
+      return `- ${item.severity}: ${item.kind} - ${item.message}${paths}`;
+    })
+    .join("\n");
+}
+
+function renderRemainingChecks(validation: ValidationRecord): string {
+  const checks = [
+    "- Review the changed files.",
+    "- Run project validation commands if needed.",
+    "- Decide whether to commit, continue editing, or discard local changes.",
+  ];
+
+  if (validation.status === "not_recorded") {
+    return [
+      "- Validation has not been recorded by this local scan.",
+      ...checks,
+    ].join("\n");
+  }
+
+  return checks.join("\n");
 }
 
 function splitLines(output: string): string[] {
