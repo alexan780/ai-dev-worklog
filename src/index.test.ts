@@ -21,7 +21,7 @@ function createSampleScan(gitRoot: string = "C:\\repo"): WorklogScan {
     generatedAt: "2026-06-06T00:00:00.000Z",
     tool: {
       name: "ai-dev-worklog",
-      version: "0.3.0",
+      version: "0.4.0",
       command: "ai-dev-worklog scan",
     },
     repository: {
@@ -289,9 +289,24 @@ test("writeScanOutputs writes markdown, json, and continuation prompt outputs", 
     ]);
 
     assert.match(markdown, /# AI Dev Worklog Scan/);
-    assert.equal(JSON.parse(json).tool.version, "0.3.0");
+    assert.equal(JSON.parse(json).tool.version, "0.4.0");
     assert.match(prompt, /# Continue This Development Session/);
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
   }
+});
+
+test("worklog JSON schema describes the current JSON contract", async () => {
+  const schemaPath = path.join(process.cwd(), "schema", "worklog.schema.json");
+  const schema = JSON.parse(await readFile(schemaPath, "utf8")) as {
+    $schema?: string;
+    properties?: {
+      schemaVersion?: {
+        const?: string;
+      };
+    };
+  };
+
+  assert.equal(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
+  assert.equal(schema.properties?.schemaVersion?.const, "0.2");
 });

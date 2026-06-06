@@ -1,5 +1,7 @@
 # AI Dev Worklog
 
+[![CI](https://github.com/alexan780/ai-dev-worklog/actions/workflows/ci.yml/badge.svg)](https://github.com/alexan780/ai-dev-worklog/actions/workflows/ci.yml)
+
 A local CLI that turns git evidence into a readable AI development worklog.
 
 AI Dev Worklog scans the current git repository and writes a Markdown report, a JSON report, and a continuation prompt. It is useful when an AI-assisted coding session needs a local, reviewable record of what changed and how to continue.
@@ -22,7 +24,7 @@ The CLI is intentionally small and local-first: it reads git evidence, writes fi
 ```bash
 git clone https://github.com/alexan780/ai-dev-worklog.git
 cd ai-dev-worklog
-npm install
+npm ci
 npm run build
 node dist/index.js scan
 ```
@@ -39,7 +41,7 @@ Running `node dist/index.js scan` writes:
 ```
 
 `latest.md` is the human-readable report.
-`latest.json` is the machine-readable scan result. It uses a structured worklog schema that separates git evidence, observed changes, validation status, risk signals, and next steps.
+`latest.json` is the machine-readable scan result. It uses a structured worklog schema that separates git evidence, observed changes, validation status, risk signals, and next steps. The formal JSON Schema is available at [`schema/worklog.schema.json`](schema/worklog.schema.json).
 `continue-prompt.md` is a prompt-oriented summary for continuing the development session.
 
 Example output is available in [`examples/basic-worklog`](examples/basic-worklog).
@@ -87,7 +89,7 @@ AI Dev Worklog turns AI-assisted coding sessions into local, reviewable developm
 Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 Build the TypeScript CLI:
@@ -110,6 +112,8 @@ node dist/index.js scan
 
 Generated build output goes to `dist/`.
 Generated worklog output goes to `.ai-dev-worklog/`.
+
+GitHub Actions runs the same install, build, and test checks on pushes to `main` and on pull requests.
 
 ## What It Records
 
@@ -136,39 +140,46 @@ Future versions may add user-provided declared intent, command history, and vali
 
 ## Roadmap
 
-### v0.1 - Local Core
+### Released
+
+#### v0.1 - Local Core
 
 - Scan the current git repository
 - Record changed files from local git evidence
 - Generate `latest.md` and `latest.json`
 - Keep all data local
 
-### v0.2 - Worklog Schema
+#### v0.2 - Worklog Schema
 
 - Define a stable JSON structure for AI coding worklogs
 - Separate declared intent from observed evidence
 - Add unified observed file changes
 - Add validation status and basic risk signals
 
-### v0.3 - Agent Workflows
+#### v0.3 - Continuation Prompt
 
 - Generate a continuation prompt for the next development session
-- Add optional workflows for AI coding tools
 - Keep git evidence as the source of truth for observed code changes
 
-### v0.4 - MCP Tools
+### Current Milestone
 
-- Provide local MCP tools for AI agents
-- Support worklog start, checkpoint, command record, validation record, and finish
+#### v0.4 - Open-source Readiness
 
-### v0.5 - Other Adapters
+- Add GitHub Actions CI
+- Add a formal JSON Schema file for `latest.json`
+- Add a changelog and release history
+- Improve README demo flow and roadmap clarity
 
-- GitHub Actions
-- VS Code / IDE integrations
+### Future Work
+
+- User-provided declared intent
+- Command history and validation evidence
+- Optional workflow guides for AI coding tools
+- Package publishing strategy
 
 ## Status
 
 This project is in early development.
 The CLI scans a git repository and generates a local Markdown worklog, a structured JSON scan result, and a continuation prompt.
 
-The next milestones focus on optional agent workflows and local tool integrations.
+The next milestones focus on strengthening the local CLI contract before adding optional workflow integrations.

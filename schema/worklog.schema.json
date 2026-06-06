@@ -1,0 +1,412 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alexan780/ai-dev-worklog/schema/worklog.schema.json",
+  "title": "AI Dev Worklog Scan",
+  "description": "Structured output written by ai-dev-worklog scan.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "tool",
+    "repository",
+    "declaredIntent",
+    "summary",
+    "evidence",
+    "observedChanges",
+    "validation",
+    "riskSignals",
+    "nextSteps"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "0.2"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tool": {
+      "$ref": "#/$defs/toolInfo"
+    },
+    "repository": {
+      "$ref": "#/$defs/repositoryInfo"
+    },
+    "declaredIntent": {
+      "$ref": "#/$defs/declaredIntent"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "evidence": {
+      "$ref": "#/$defs/evidence"
+    },
+    "observedChanges": {
+      "$ref": "#/$defs/observedChanges"
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    },
+    "riskSignals": {
+      "$ref": "#/$defs/riskSignals"
+    },
+    "nextSteps": {
+      "$ref": "#/$defs/nextSteps"
+    }
+  },
+  "$defs": {
+    "toolInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "command"
+      ],
+      "properties": {
+        "name": {
+          "const": "ai-dev-worklog"
+        },
+        "version": {
+          "type": "string"
+        },
+        "command": {
+          "const": "ai-dev-worklog scan"
+        }
+      }
+    },
+    "repositoryInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cwd",
+        "gitRoot"
+      ],
+      "properties": {
+        "cwd": {
+          "type": "string"
+        },
+        "gitRoot": {
+          "type": "string"
+        }
+      }
+    },
+    "declaredIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "const": "not_provided"
+        },
+        "source": {
+          "const": "not_provided"
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "statusEntryCount",
+        "diffNameStatusEntryCount",
+        "changedFileCount",
+        "hasWorkingTreeChanges",
+        "validationStatus",
+        "riskSignalCount"
+      ],
+      "properties": {
+        "statusEntryCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diffNameStatusEntryCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "changedFileCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hasWorkingTreeChanges": {
+          "type": "boolean"
+        },
+        "validationStatus": {
+          "const": "not_recorded"
+        },
+        "riskSignalCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "git"
+      ],
+      "properties": {
+        "git": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "statusPorcelain",
+            "diffStat",
+            "diffNameStatus"
+          ],
+          "properties": {
+            "statusPorcelain": {
+              "$ref": "#/$defs/gitCommandResult"
+            },
+            "diffStat": {
+              "$ref": "#/$defs/gitCommandResult"
+            },
+            "diffNameStatus": {
+              "$ref": "#/$defs/gitCommandResult"
+            }
+          }
+        }
+      }
+    },
+    "gitCommandResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "stdout",
+        "stderr",
+        "exitCode"
+      ],
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "exitCode": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "observedChanges": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "statusEntries",
+        "diffNameStatusEntries",
+        "files"
+      ],
+      "properties": {
+        "statusEntries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/statusEntry"
+          }
+        },
+        "diffNameStatusEntries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nameStatusEntry"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/observedFileChange"
+          }
+        }
+      }
+    },
+    "statusEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "indexStatus",
+        "workingTreeStatus",
+        "path",
+        "raw"
+      ],
+      "properties": {
+        "indexStatus": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1
+        },
+        "workingTreeStatus": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1
+        },
+        "path": {
+          "type": "string"
+        },
+        "previousPath": {
+          "type": "string"
+        },
+        "raw": {
+          "type": "string"
+        }
+      }
+    },
+    "nameStatusEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "path",
+        "raw"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "previousPath": {
+          "type": "string"
+        },
+        "raw": {
+          "type": "string"
+        }
+      }
+    },
+    "observedFileChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "previousPath",
+        "status",
+        "sources"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "previousPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "enum": [
+            "modified",
+            "added",
+            "deleted",
+            "renamed",
+            "copied",
+            "untracked",
+            "unknown"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "commands"
+      ],
+      "properties": {
+        "status": {
+          "const": "not_recorded"
+        },
+        "commands": {
+          "type": "array",
+          "maxItems": 0
+        }
+      }
+    },
+    "riskSignals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/riskSignal"
+          }
+        }
+      }
+    },
+    "riskSignal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "severity",
+        "message",
+        "paths"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "untracked_files",
+            "deleted_files",
+            "renamed_files"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "nextSteps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "continuationPrompt"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "continuationPrompt": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
