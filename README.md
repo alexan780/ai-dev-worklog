@@ -4,7 +4,7 @@
 
 A local CLI that turns git evidence into a readable AI development worklog.
 
-AI Dev Worklog scans the current git repository and writes a Markdown report, a JSON report, and a continuation prompt. It is useful when an AI-assisted coding session needs a local, reviewable record of what changed and how to continue.
+AI Dev Worklog scans the current git repository and writes a Markdown report, a JSON report, and a continuation prompt. It is useful when an AI-assisted coding session needs a local, reviewable record of what changed, what the task goal was, and how to continue.
 
 The CLI is intentionally small and local-first: it reads git evidence, writes files under `.ai-dev-worklog/`, and keeps the output on your machine.
 
@@ -12,6 +12,7 @@ The CLI is intentionally small and local-first: it reads git evidence, writes fi
 
 `ai-dev-worklog scan` records:
 
+- optional declared intent from `--intent`
 - changed files from `git status --porcelain`
 - tracked file changes from `git diff --name-status`
 - diff summary from `git diff --stat`
@@ -21,17 +22,38 @@ The CLI is intentionally small and local-first: it reads git evidence, writes fi
 
 ## Quick Start
 
+Run once with `npx`:
+
+```bash
+npx ai-dev-worklog scan
+```
+
+Add a task goal for the next session:
+
+```bash
+npx ai-dev-worklog scan --intent "Prepare the repository for an open-source release"
+```
+
+Install globally:
+
+```bash
+npm install -g ai-dev-worklog
+ai-dev-worklog scan --intent "Review local changes before opening a pull request"
+```
+
+Run from source:
+
 ```bash
 git clone https://github.com/alexan780/ai-dev-worklog.git
 cd ai-dev-worklog
 npm ci
 npm run build
-node dist/index.js scan
+node dist/index.js scan --intent "Verify the local CLI from source"
 ```
 
 ## Local Output
 
-Running `node dist/index.js scan` writes:
+Running `ai-dev-worklog scan` writes:
 
 ```text
 .ai-dev-worklog/
@@ -41,7 +63,7 @@ Running `node dist/index.js scan` writes:
 ```
 
 `latest.md` is the human-readable report.
-`latest.json` is the machine-readable scan result. It uses a structured worklog schema that separates git evidence, observed changes, validation status, risk signals, and next steps. The formal JSON Schema is available at [`schema/worklog.schema.json`](schema/worklog.schema.json).
+`latest.json` is the machine-readable scan result. It uses a structured worklog schema that separates declared intent, git evidence, observed changes, validation status, risk signals, and next steps. The formal JSON Schema is available at [`schema/worklog.schema.json`](schema/worklog.schema.json).
 `continue-prompt.md` is a prompt-oriented summary for continuing the development session.
 
 Example output is available in [`examples/basic-worklog`](examples/basic-worklog).
@@ -57,6 +79,7 @@ Example summary:
 - Working tree has changes: yes
 - Validation: not_recorded
 - Risk signals: 0
+- Declared intent: Prepare the repository for an open-source release
 ```
 
 ## What The CLI Scans
@@ -72,6 +95,15 @@ git diff --name-status
 The scan uses local git evidence as the source of truth for observed code changes.
 
 The CLI does not read chat windows, call AI APIs, upload code, or integrate with Codex App, Claude Code, Cursor, or MCP tools.
+
+## Privacy And Data Flow
+
+AI Dev Worklog runs locally in the git repository where you call it.
+
+- It runs local git commands.
+- It writes local files under `.ai-dev-worklog/`.
+- It does not upload source code or generated worklogs.
+- It does not require an API key.
 
 ## Why This Exists
 
@@ -107,7 +139,7 @@ npm test
 Run a local scan:
 
 ```bash
-node dist/index.js scan
+node dist/index.js scan --intent "Validate local development output"
 ```
 
 Generated build output goes to `dist/`.
@@ -121,6 +153,7 @@ The CLI records observed local git evidence.
 
 Current output includes:
 
+- optional declared intent from the CLI
 - changed files from `git status --porcelain`
 - tracked file changes from `git diff --name-status`
 - diff summary from `git diff --stat`
@@ -128,7 +161,7 @@ Current output includes:
 - a JSON worklog schema with declared intent, evidence, observed changes, validation status, risk signals, and next steps
 - a continuation prompt file with changed files, command results, risk signals, remaining checks, and suggested next steps
 
-Future versions may add user-provided declared intent, command history, and validation evidence.
+Future versions may add command history and validation evidence.
 
 ## What It Is
 
@@ -168,12 +201,16 @@ Future versions may add user-provided declared intent, command history, and vali
 - Add a changelog and release history
 - Improve README demo flow and roadmap clarity
 
+#### v0.5 - Declared Intent
+
+- Add `--intent` for recording the task goal in local worklog output
+- Include declared intent in Markdown and continuation prompt output
+- Prepare npm metadata and public installation paths
+
 ### Future Work
 
-- User-provided declared intent
 - Command history and validation evidence
 - Optional workflow guides for AI coding tools
-- Package publishing strategy
 
 ## Status
 

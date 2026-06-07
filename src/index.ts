@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const outputDirectoryName = ".ai-dev-worklog";
 const toolName = "ai-dev-worklog";
-const toolVersion = "0.4.0";
+const toolVersion = "0.5.0";
 const scanCommand = "ai-dev-worklog scan";
 const statusPorcelainCommand = "git status --porcelain";
 const diffNameStatusCommand = "git diff --name-status";
@@ -59,9 +59,13 @@ export interface RepositoryInfo {
 }
 
 export interface DeclaredIntent {
-  status: "not_provided";
-  source: "not_provided";
+  status: "not_provided" | "provided";
+  source: "not_provided" | "cli_option";
   summary: string | null;
+}
+
+export interface ScanOptions {
+  intent?: string;
 }
 
 export interface ObservedFileChange {
@@ -93,7 +97,7 @@ export interface NextSteps {
 }
 
 export interface WorklogScan {
-  schemaVersion: "0.2";
+  schemaVersion: "0.3";
   generatedAt: string;
   tool: ToolInfo;
   repository: RepositoryInfo;
@@ -237,7 +241,7 @@ export function buildRiskSignals(files: ObservedFileChange[]): RiskSignals {
   return { items };
 }
 
-export async function scanRepository(cwd: string = process.cwd()): Promise<WorklogScan> {
+export async function scanRepository(cwd: string = process.cwd(), options: ScanOptions = {}): Promise<WorklogScan> {
   const gitRoot = await resolveGitRoot(cwd);
   const [statusPorcelain, diffStat, diffNameStatus] = await Promise.all([
     runGit(["status", "--porcelain"], gitRoot),
@@ -259,7 +263,7 @@ export async function scanRepository(cwd: string = process.cwd()): Promise<Workl
   const riskSignals = buildRiskSignals(files);
 
   return {
-    schemaVersion: "0.2",
+    schemaVersion: "0.3",
     generatedAt: new Date().toISOString(),
     tool: {
       name: toolName,
@@ -270,11 +274,7 @@ export async function scanRepository(cwd: string = process.cwd()): Promise<Workl
       cwd: path.resolve(cwd),
       gitRoot,
     },
-    declaredIntent: {
-      status: "not_provided",
-      source: "not_provided",
-      summary: null,
-    },
+    declaredIntent: buildDeclaredIntent(options.intent),
     summary: {
       statusEntryCount: statusEntries.length,
       diffNameStatusEntryCount: diffNameStatusEntries.length,
@@ -351,6 +351,7 @@ export function renderMarkdown(scan: WorklogScan): string {
     `- Working tree has changes: ${scan.summary.hasWorkingTreeChanges ? "yes" : "no"}`,
     `- Validation: ${scan.summary.validationStatus}`,
     `- Risk signals: ${scan.summary.riskSignalCount}`,
+    `- Declared intent: ${renderDeclaredIntent(scan.declaredIntent)}`,
     "",
     "## Changed Files",
     "",
@@ -426,10 +427,18 @@ export function renderContinuePrompt(scan: WorklogScan): string {
 }
 
 export async function runCli(argv: string[] = process.argv.slice(2), cwd: string = process.cwd()): Promise<number> {
-  const [command] = argv;
+  const [command, ...args] = argv;
 
   if (command === "scan") {
-    const scan = await scanRepository(cwd);
+    const parsed = parseScanArgs(args);
+
+    if (parsed.error !== undefined) {
+      console.error(parsed.error);
+      printHelp();
+      return 1;
+    }
+
+    const scan = await scanRepository(cwd, parsed.options);
     const outputs = await writeScanOutputs(scan);
     console.log(`Wrote ${outputs.markdownPath}`);
     console.log(`Wrote ${outputs.jsonPath}`);
@@ -445,6 +454,47 @@ export async function runCli(argv: string[] = process.argv.slice(2), cwd: string
   console.error(`Unknown command: ${command}`);
   printHelp();
   return 1;
+}
+
+function parseScanArgs(args: string[]): { options: ScanOptions; error?: string } {
+  const options: ScanOptions = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === "--intent") {
+      const value = args[index + 1];
+
+      if (value === undefined || value.startsWith("--")) {
+        return { options, error: "--intent requires a non-empty value." };
+      }
+
+      const intent = value.trim();
+
+      if (intent.length === 0) {
+        return { options, error: "--intent requires a non-empty value." };
+      }
+
+      options.intent = intent;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--intent=")) {
+      const intent = arg.slice("--intent=".length).trim();
+
+      if (intent.length === 0) {
+        return { options, error: "--intent requires a non-empty value." };
+      }
+
+      options.intent = intent;
+      continue;
+    }
+
+    return { options, error: `Unknown scan option: ${arg}` };
+  }
+
+  return { options };
 }
 
 async function resolveGitRoot(cwd: string): Promise<string> {
@@ -580,6 +630,24 @@ function pathsWithStatus(files: ObservedFileChange[], status: ObservedFileStatus
   return files.filter((file) => file.status === status).map((file) => file.path);
 }
 
+function buildDeclaredIntent(intent: string | undefined): DeclaredIntent {
+  const summary = intent?.trim();
+
+  if (summary === undefined || summary.length === 0) {
+    return {
+      status: "not_provided",
+      source: "not_provided",
+      summary: null,
+    };
+  }
+
+  return {
+    status: "provided",
+    source: "cli_option",
+    summary,
+  };
+}
+
 function renderObservedFileRows(files: ObservedFileChange[]): string {
   return files
     .map((entry) => {
@@ -663,7 +731,8 @@ function escapeMarkdownTableCell(value: string): string {
 }
 
 function printHelp(): void {
-  console.log("Usage: ai-dev-worklog scan");
+  console.log("Usage: ai-dev-worklog scan [--intent <summary>]");
+  console.log("       ai-dev-worklog scan [--intent=<summary>]");
 }
 
 function trimTrailingNewline(value: string | Buffer): string {
