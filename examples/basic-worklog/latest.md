@@ -12,6 +12,7 @@ Working directory: /workspace/example-repo
 - Working tree has changes: yes
 - Validation: not_recorded
 - Risk signals: 0
+- Declared intent: Prepare the repository for an open-source release
 
 ## Changed Files
 

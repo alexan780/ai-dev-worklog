@@ -2,6 +2,14 @@
 
 All notable changes to AI Dev Worklog are recorded here.
 
+## 0.5.0 - 2026-06-07
+
+- Add `--intent` for recording the task goal in local worklog output.
+- Include declared intent in Markdown and continuation prompt output.
+- Set `schemaVersion` to `0.3` and expand the JSON Schema for provided CLI intent.
+- Add npm package metadata and public install guidance.
+- Add public launch and application draft notes for early open-source feedback.
+
 ## 0.4.0 - 2026-06-06
 
 - Add GitHub Actions CI for install, build, and test validation.

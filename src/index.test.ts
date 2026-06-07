@@ -17,11 +17,11 @@ import {
 
 function createSampleScan(gitRoot: string = "C:\\repo"): WorklogScan {
   return {
-    schemaVersion: "0.2",
+    schemaVersion: "0.3",
     generatedAt: "2026-06-06T00:00:00.000Z",
     tool: {
       name: "ai-dev-worklog",
-      version: "0.4.0",
+      version: "0.5.0",
       command: "ai-dev-worklog scan",
     },
     repository: {
@@ -210,7 +210,7 @@ test("renderMarkdown includes command output and observed changes", () => {
   const scan = createSampleScan();
 
   const json = JSON.parse(JSON.stringify(scan)) as Record<string, unknown>;
-  assert.equal(json.schemaVersion, "0.2");
+  assert.equal(json.schemaVersion, "0.3");
   assert.deepEqual(Object.keys(json), [
     "schemaVersion",
     "generatedAt",
@@ -233,6 +233,7 @@ test("renderMarkdown includes command output and observed changes", () => {
 
   assert.match(markdown, /# AI Dev Worklog Scan/);
   assert.match(markdown, /Changed files: 1/);
+  assert.match(markdown, /Declared intent: Not provided by this local scan\./);
   assert.match(markdown, /\| modified \| README\.md \|  \| git status --porcelain, git diff --name-status \|/);
   assert.match(markdown, /\|  M \| README\.md \|/);
   assert.match(markdown, /git diff --name-status/);
@@ -271,6 +272,21 @@ test("renderContinuePrompt handles empty changed files", () => {
   assert.match(prompt, /No changed files observed\./);
 });
 
+test("render outputs include provided CLI intent", () => {
+  const scan = createSampleScan();
+  scan.declaredIntent = {
+    status: "provided",
+    source: "cli_option",
+    summary: "Prepare public credibility materials before applying to an OSS program.",
+  };
+
+  const markdown = renderMarkdown(scan);
+  const prompt = renderContinuePrompt(scan);
+
+  assert.match(markdown, /Declared intent: Prepare public credibility materials before applying to an OSS program\./);
+  assert.match(prompt, /Prepare public credibility materials before applying to an OSS program\./);
+});
+
 test("writeScanOutputs writes markdown, json, and continuation prompt outputs", async () => {
   const tempDirectory = await mkdtemp(path.join(os.tmpdir(), "ai-dev-worklog-test-"));
 
@@ -289,7 +305,7 @@ test("writeScanOutputs writes markdown, json, and continuation prompt outputs", 
     ]);
 
     assert.match(markdown, /# AI Dev Worklog Scan/);
-    assert.equal(JSON.parse(json).tool.version, "0.4.0");
+    assert.equal(JSON.parse(json).tool.version, "0.5.0");
     assert.match(prompt, /# Continue This Development Session/);
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
@@ -308,5 +324,5 @@ test("worklog JSON schema describes the current JSON contract", async () => {
   };
 
   assert.equal(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
-  assert.equal(schema.properties?.schemaVersion?.const, "0.2");
+  assert.equal(schema.properties?.schemaVersion?.const, "0.3");
 });

@@ -1,8 +1,25 @@
 {
   "name": "ai-dev-worklog",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Local worklog CLI for AI-assisted development sessions.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexan780/ai-dev-worklog.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alexan780/ai-dev-worklog/issues"
+  },
+  "homepage": "https://github.com/alexan780/ai-dev-worklog#readme",
+  "keywords": [
+    "ai-agents",
+    "cli",
+    "codex",
+    "developer-tools",
+    "local-first",
+    "typescript",
+    "worklog"
+  ],
   "bin": {
     "ai-dev-worklog": "dist/index.js"
   },
@@ -20,6 +37,9 @@
     "README.md",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.14.9",

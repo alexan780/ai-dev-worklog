@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "0.2",
+  "schemaVersion": "0.3",
   "generatedAt": "2026-06-06T00:00:00.000Z",
   "tool": {
     "name": "ai-dev-worklog",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "command": "ai-dev-worklog scan"
   },
   "repository": {
@@ -11,9 +11,9 @@
     "gitRoot": "/workspace/example-repo"
   },
   "declaredIntent": {
-    "status": "not_provided",
-    "source": "not_provided",
-    "summary": null
+    "status": "provided",
+    "source": "cli_option",
+    "summary": "Prepare the repository for an open-source release"
   },
   "summary": {
     "statusEntryCount": 2,
